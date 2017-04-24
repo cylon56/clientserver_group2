@@ -93,8 +93,7 @@ int main(int argc, char *argv[])
 			write(1,"Received a datagram: ",21);
 			write(1,bufUDP,num);
 			bufUDP[num] = '\0';
-			printf("%s", bufUDP);
-			cout << endl;
+			printf("%s\n", bufUDP);
 			fclose(f);
 			close(sockUDP);
 			exit(0);
