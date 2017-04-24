@@ -19,6 +19,8 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+using namespace std;
+
 
 void error(const char *msg) { // function to print any errors
     perror(msg);
@@ -53,7 +55,7 @@ strcat(InString,c_time_string);
     return InString;
 }
 
-void toLogServer (char* string) { // creates a client that takes the buffer from the server, and sends it to log server
+void toLogServer (char* string, char* ipaddress) { // creates a client that takes the buffer from the server, and sends it to log server
 	int sock, n;
 	unsigned int length;
 	struct sockaddr_in server;
@@ -69,6 +71,12 @@ void toLogServer (char* string) { // creates a client that takes the buffer from
 
 	bcopy((char *)hp->h_addr, (char *)&server.sin_addr, hp->h_length);
 	server.sin_port = htons(9998);
+	if(strcmp(ipaddress, "0") != 0)
+	{
+		printf("%s\n", "triggered");
+		server.sin_addr.s_addr = inet_addr(ipaddress);
+	}
+	
 	length=sizeof(struct sockaddr_in);
    
 	buffer = addDate(string);
@@ -78,7 +86,7 @@ void toLogServer (char* string) { // creates a client that takes the buffer from
 	close(sock);
 }
 
-void dostuff(int sock) { //Method that is provided from http://www.linuxhowtos.org/C_C++/socket.htm and is used as instructed by the professor
+void dostuff (int sock, char* ipaddress) { //Method that is provided from http://www.linuxhowtos.org/C_C++/socket.htm and is used as instructed by the professor
 	int theNumber, pid;
 	char buffer[256];
 	char* tempBuf;
@@ -90,7 +98,7 @@ void dostuff(int sock) { //Method that is provided from http://www.linuxhowtos.o
 	if (pid < 0)
 		error("child process");
 	if (pid == 0) {
-		toLogServer(buffer);
+		toLogServer(buffer, ipaddress);
 		exit(0);
 	}
 	else {
@@ -110,6 +118,7 @@ int main(int argc, char *argv[]) {
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int n = argc-1;
+	char* ipaddress = "0";//set for 0 in case no ip address is passed
 		
 	// Calls if there is no argument for the port
     if (argc < 2 || argc > 4) {
@@ -118,7 +127,16 @@ int main(int argc, char *argv[]) {
     }
 	
 	//Using socket() to establish the server via a port number, using a for loop for the number of port numbers
-	for (int i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) 
+	{
+		
+		//Third Deliverable Improvement by Michael Lewellen
+		if(strcmp(argv[i], "-logip") == 0)
+		{
+			ipaddress = argv[i+1];
+			break;
+		}
+		
 		sockT = socket(AF_INET, SOCK_STREAM, 0);
 		sockU = socket(AF_INET, SOCK_DGRAM, 0);
 		
@@ -187,7 +205,7 @@ int main(int argc, char *argv[]) {
 					error("ERROR on creating the fork");
 				if (pidUDP == 0) {
 					close(sockUDP[0]);
-					toLogServer(bufUDP);
+					toLogServer(bufUDP, ipaddress);
 					exit(0);
 				}
 				else {
@@ -208,7 +226,8 @@ int main(int argc, char *argv[]) {
 			clilen = sizeof(cli_addr);
 		
 			//Continuous server. Calls dostuff() for the accept and recvieve steps
-			while (1) {
+			while (1) 
+			{
 				newsockTCP = accept(sockTCP[0], (struct sockaddr *) &cli_addr, &clilen);
 				if (newsockTCP < 0) 
 					error("ERROR on accepting the socket");
@@ -217,7 +236,7 @@ int main(int argc, char *argv[]) {
 					error("ERROR on creating the fork");
 				if (pidTCP == 0) {
 					close(sockTCP[0]);
-					dostuff(newsockTCP);
+					dostuff(newsockTCP, ipaddress);
 					exit(0);
 				}
 				else close(newsockTCP);
@@ -225,7 +244,7 @@ int main(int argc, char *argv[]) {
 		} //End of TCP
 	} //End of first port
 	else { //Split between the second and third process
-		if(argc > 2) { //only go on if two ports are used
+		if(argc > 2 && strcmp(ipaddress, "0") == 0) { //only go on if two ports are used
 			pidSecondSplit = fork(); //start second split, between two ports and three ports
 			if (pidSecondSplit < 0)
 				error("ERROR on creating the fork");
@@ -252,7 +271,7 @@ int main(int argc, char *argv[]) {
 							error("ERROR on creating the fork");
 						if (pidUDP == 0) {
 							close(sockUDP[1]);
-							toLogServer(bufUDP);
+							toLogServer(bufUDP, ipaddress);
 							exit(0);
 						}
 						else {
@@ -283,7 +302,7 @@ int main(int argc, char *argv[]) {
 							error("ERROR on creating the fork");
 						if (pidTCP == 0) {
 							close(sockTCP[1]);
-							dostuff(newsockTCP); 
+							dostuff(newsockTCP, ipaddress); 
 							exit(0);
 						}
 						else close(newsockTCP);
@@ -291,7 +310,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			else {
-				if(argc > 3) { //Only go on if three ports are used
+				if(argc > 3 && strcmp(ipaddress, "0") == 0) { //Only go on if three ports are used
 					pidThirdSplit = fork(); //start second split, between two ports and three ports
 					if (pidThirdSplit < 0)
 						error("ERROR on creating the fork");
@@ -318,7 +337,7 @@ int main(int argc, char *argv[]) {
 								error("ERROR on creating the fork");
 							if (pidUDP == 0) {
 								close(sockUDP[2]);
-								toLogServer(bufUDP);
+								toLogServer(bufUDP, ipaddress);
 								exit(0);
 							}
 							else {
@@ -353,7 +372,7 @@ int main(int argc, char *argv[]) {
 								error("ERROR on creating the fork");
 							if (pidTCP == 0) {
 								close(sockTCP[2]);
-								dostuff(newsockTCP); 
+								dostuff(newsockTCP, ipaddress); 
 								exit(0);
 							}
 							else close(newsockTCP);
