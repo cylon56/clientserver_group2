@@ -54,8 +54,8 @@ char* addDate(char* InString)
 strcat(InString,c_time_string);
     return InString;
 }
-
-void toLogServer (char* string, char* ipaddress) { // creates a client that takes the buffer from the server, and sends it to log server
+//Deliverable 3- user2 edit: added int  logPort to method call
+void toLogServer (char* string, char* ipaddress, int logPort) { // creates a client that takes the buffer from the server, and sends it to log server
 	int sock, n;
 	unsigned int length;
 	struct sockaddr_in server;
@@ -66,15 +66,18 @@ void toLogServer (char* string, char* ipaddress) { // creates a client that take
 	if (sock < 0) error("socket");
 
 	server.sin_family = AF_INET;
-	hp = gethostbyname("127.0.0.1"); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
+	hp = gethostbyname(ipaddress); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
 	if (hp==0) error("Unknown host");
 
 	bcopy((char *)hp->h_addr, (char *)&server.sin_addr, hp->h_length);
-	server.sin_port = htons(9998);
+	server.sin_port = htons(logPort);
 	if(strcmp(ipaddress, "0") != 0)
 	{
 		printf("%s\n", "triggered");
 		server.sin_addr.s_addr = inet_addr(ipaddress);
+	}
+	if(logPort <= 0){//Third Deliverable pt2 defaults to port no 9999
+		logPort = 9999;
 	}
 	
 	length=sizeof(struct sockaddr_in);
@@ -86,7 +89,7 @@ void toLogServer (char* string, char* ipaddress) { // creates a client that take
 	close(sock);
 }
 
-void dostuff (int sock, char* ipaddress) { //Method that is provided from http://www.linuxhowtos.org/C_C++/socket.htm and is used as instructed by the professor
+void dostuff (int sock, char* ipaddress, int logPort) { //Method that is provided from http://www.linuxhowtos.org/C_C++/socket.htm and is used as instructed by the professor
 	int theNumber, pid;
 	char buffer[256];
 	char* tempBuf;
@@ -98,7 +101,7 @@ void dostuff (int sock, char* ipaddress) { //Method that is provided from http:/
 	if (pid < 0)
 		error("child process");
 	if (pid == 0) {
-		toLogServer(buffer, ipaddress);
+		toLogServer(buffer, ipaddress, logPort);
 		exit(0);
 	}
 	else {
@@ -112,21 +115,23 @@ void dostuff (int sock, char* ipaddress) { //Method that is provided from http:/
 int main(int argc, char *argv[]) {
 	
 	// Initiate starting variables
-    int sockT, sockU, portno, pidTCP, pidUDP, pidFirstSplit, pidSecondSplit, pidThirdSplit;
+    int sockT, sockU, portno, logPort, pidTCP, pidUDP, pidFirstSplit, pidSecondSplit, pidThirdSplit;
 	int sockTCP[argc-1];
 	int sockUDP[argc-1];
+	
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int n = argc-1;
 	char* ipaddress = "0";//set for 0 in case no ip address is passed
 		
 	// Calls if there is no argument for the port
-    if (argc < 2 || argc > 4) {
+	// changed from argc > 4 -> argc > 6 during Third deliverable pt 2
+    if (argc < 2 || argc > 6) {
         error("ERROR, no port passed as an argument, or too many ports\n");
         exit(1);
     }
 	
-	//Using socket() to establish the server via a port number, using a for loop for the number of port numbers
+	//Using socket( to establish the server via a port number, using a for loop for the number of port numbers
 	for (int i = 1; i < argc; i++) 
 	{
 		
@@ -135,6 +140,12 @@ int main(int argc, char *argv[]) {
 		{
 			ipaddress = argv[i+1];
 			break;
+		}
+		//Third Deliverable user2 task- Edward Shih
+		if(strcmp(argv[i], "-logport") == 0){
+			logPort = atoi(argv[i+1]);	
+			break;
+		
 		}
 		
 		sockT = socket(AF_INET, SOCK_STREAM, 0);
@@ -205,7 +216,7 @@ int main(int argc, char *argv[]) {
 					error("ERROR on creating the fork");
 				if (pidUDP == 0) {
 					close(sockUDP[0]);
-					toLogServer(bufUDP, ipaddress);
+					toLogServer(bufUDP, ipaddress, logPort);
 					exit(0);
 				}
 				else {
@@ -236,7 +247,7 @@ int main(int argc, char *argv[]) {
 					error("ERROR on creating the fork");
 				if (pidTCP == 0) {
 					close(sockTCP[0]);
-					dostuff(newsockTCP, ipaddress);
+					dostuff(newsockTCP, ipaddress, logPort);
 					exit(0);
 				}
 				else close(newsockTCP);
@@ -271,7 +282,7 @@ int main(int argc, char *argv[]) {
 							error("ERROR on creating the fork");
 						if (pidUDP == 0) {
 							close(sockUDP[1]);
-							toLogServer(bufUDP, ipaddress);
+							toLogServer(bufUDP, ipaddress, logPort);
 							exit(0);
 						}
 						else {
@@ -302,7 +313,7 @@ int main(int argc, char *argv[]) {
 							error("ERROR on creating the fork");
 						if (pidTCP == 0) {
 							close(sockTCP[1]);
-							dostuff(newsockTCP, ipaddress); 
+							dostuff(newsockTCP, ipaddress, logPort); 
 							exit(0);
 						}
 						else close(newsockTCP);
@@ -337,7 +348,7 @@ int main(int argc, char *argv[]) {
 								error("ERROR on creating the fork");
 							if (pidUDP == 0) {
 								close(sockUDP[2]);
-								toLogServer(bufUDP, ipaddress);
+								toLogServer(bufUDP, ipaddress, logPort);
 								exit(0);
 							}
 							else {
@@ -372,7 +383,7 @@ int main(int argc, char *argv[]) {
 								error("ERROR on creating the fork");
 							if (pidTCP == 0) {
 								close(sockTCP[2]);
-								dostuff(newsockTCP, ipaddress); 
+								dostuff(newsockTCP, ipaddress, logPort); 
 								exit(0);
 							}
 							else close(newsockTCP);
