@@ -5,7 +5,7 @@
 //	details: 	This code has been taken (as instructed by the professor) from 
 //				http://www.linuxhowtos.org/C_C++/socket.htm and
 // 				has been modified by the author, Nicholas Strauss.
-
+//Part 2 completed
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
