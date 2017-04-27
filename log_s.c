@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <iostream>
 
+
 using namespace std;
 
 void error(const char *msg) //function to print any errors
@@ -36,9 +37,11 @@ int main(int argc, char *argv[])
 	
 	// Calls if there is no argument for the port
     if (argc < 2) {
-        fprintf(stderr,"ERROR, no port passed as an argument\n");
-        exit(1);
+        fprintf(stderr,"Warning: No Port given, defaulting to 9999\n");
+       // exit(1);
     }
+
+
 	
 	//Using socket() to establish the server
 	sockUDP = socket(AF_INET, SOCK_DGRAM, 0);
@@ -50,7 +53,16 @@ int main(int argc, char *argv[])
 	
 	//Server settings
 	bzero((char *) &serv_addr, sizeof(serv_addr));
-    portno = atoi(argv[1]);
+ 
+ if(argc < 2)
+ {
+    portno = 9999;
+  }
+  else
+  {
+      portno = atoi(argv[1]);
+  }
+  
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
