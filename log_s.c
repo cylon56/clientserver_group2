@@ -26,7 +26,6 @@ void error(const char *msg) //function to print any errors
 
 int main(int argc, char *argv[]) 
 {
-	
 	// Initiate starting variables
     int sockUDP, portno, pidUDP, pid;
 	int opt =1;
@@ -42,7 +41,7 @@ int main(int argc, char *argv[])
     }
 
 
-	
+
 	//Using socket() to establish the server
 	sockUDP = socket(AF_INET, SOCK_DGRAM, 0);
 	
@@ -88,7 +87,8 @@ int main(int argc, char *argv[])
 	fromlen = sizeof(struct sockaddr_in);
 	
 	
-	pidUDP = fork();
+
+pidUDP = fork();
 	if (pidUDP == 0) {
 	while (1) 
 	{ // Receive and write 
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 		if (pid < 0) error("ERROR on creating the fork");
 			
 		if(pid == 0)//use child to pass message to log file
-		{
+		{ 
 			FILE *f = freopen( "echo.log", "a", stdout );//send output to log file
 			write(1,"Received a datagram: ",21);
 			write(1,bufUDP,num);
@@ -108,14 +108,22 @@ int main(int argc, char *argv[])
 			printf("%s\n", bufUDP);
 			fclose(f);
 			close(sockUDP);
-			exit(0);
-			
+			exit(0);		
 		}
+		else {
+		//TODO: when reads a certain message, close log_s
+			if (strcmp(bufUDP, "echo_s is stopping") == 0) {
+			exit(0);
+		}
+		}
+
 	// End of the loop
 	}
 	}
 	
 	//Close and exit
-	close(sockUDP);
-    return 0; 
+
+close(sockUDP);
+return 0; 
+
 }
