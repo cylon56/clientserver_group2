@@ -19,8 +19,11 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+#include "echo_s.h"
+
 using namespace std;
 
+int port_global = 9999;	
 
 void error(const char *msg) { // function to print any errors
     perror(msg);
@@ -31,25 +34,23 @@ void error(const char *msg) { // function to print any errors
 //Made by Mark Sowders, a lot of it is gotten from https://en.wikipedia.org/wiki/C_date_and_time_functions with modifications to fit our needs
 char* addDate(char* InString)
 {
+
     time_t current_time;
     char* c_time_string;
 
     /* Obtain current time. */
     current_time = time(NULL);
-
+	
     if (current_time == ((time_t)-1))
     {
         (void) fprintf(stderr, "Failure to obtain the current time.\n");
     }
-
     /* Convert to local time format. */
     c_time_string = ctime(&current_time);
-
     if (c_time_string == NULL)
-    {
+    {	
         (void) fprintf(stderr, "Failure to convert the current time.\n");
     }
-
 //Amends the date/time to the end of the given string        
 strcat(InString,c_time_string);
     return InString;
@@ -61,32 +62,45 @@ void toLogServer (char* string, char* ipaddress, int logPort) { // creates a cli
 	struct sockaddr_in server;
 	struct hostent *hp;
 	char* buffer;
-   
+  
+
+  printf("ToLogServer was called \n ");
+
+
 	sock= socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) error("socket");
-	
-	if(strcmp(ipaddress, "0") != 0)
+
+
+	if(strcmp(ipaddress, "127.0.0.1") != 0)
 	{
 	//	printf("%s\n", "triggered");
 		server.sin_addr.s_addr = inet_addr(ipaddress);
+		server.sin_family = AF_INET;
+		hp = gethostbyname(ipaddress); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
+		if (hp==0) error("Unknown host");
 	}
+	else {
+		server.sin_addr.s_addr = inet_addr("127.0.0.1");
+		server.sin_family = AF_INET;
+		hp = gethostbyname("127.0.0.1"); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
+		if (hp==0) error("Unknown host");
+	}
+
 	if(logPort <= 0){//Third Deliverable pt2 defaults to port no 9999
 		logPort = 9999;
 	}
 
-
-	server.sin_family = AF_INET;
-	hp = gethostbyname(ipaddress); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
-	if (hp==0) error("Unknown host");
-
 	bcopy((char *)hp->h_addr, (char *)&server.sin_addr, hp->h_length);
 	server.sin_port = htons(logPort);
 	
+
 	length=sizeof(struct sockaddr_in);
-   
+   	
+
 	buffer = addDate(string);
-   
+   	
 	n = sendto(sock,buffer,strlen(buffer),0,(const struct sockaddr *)&server,length);
+	
 	if (n < 0) error("Sendto");
 	close(sock);
 }
@@ -114,8 +128,21 @@ void dostuff (int sock, char* ipaddress, int logPort) { //Method that is provide
 	}
 }
 
+
+void SignalHandler (int Signal) {
+
+	printf("This is before the log server call \n");
+	char end[20] = "echo_s is stopping";
+	toLogServer(end, "127.0.0.1", port_global); 
+	printf("echo_s is stopping \n");
+	exit(0);
+}
+
+
 int main(int argc, char *argv[]) {
-	
+
+signal(SIGINT, SignalHandler);
+
 	// Initiate starting variables
     int sockT, sockU, portno, logPort, pidTCP, pidUDP, pidFirstSplit, pidSecondSplit, pidThirdSplit;
 	int sockTCP[argc-1];
@@ -124,8 +151,8 @@ int main(int argc, char *argv[]) {
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int n = argc-1;
-	char * ipaddress = "127.0.0.1"; //set for 127.0.0.1 in case no ip address is passed, changed from 0 in part 5
-		
+	char* ipaddress = "127.0.0.1"; //set for 127.0.0.1 in case no ip address is passed, changed from 0 in part 5
+
 	// Calls if there is no argument for the port
 	// changed from argc > 4 -> argc > 6 during Third deliverable pt 2
 	// removed argc > 6 in part 5
@@ -149,7 +176,8 @@ int main(int argc, char *argv[]) {
 		}
 		//Third Deliverable user2 task- Edward Shih
 		else if (strcmp(argv[i], "-logport") == 0){
-			logPort = atoi(argv[i+1]);	
+			logPort = atoi(argv[i+1]);
+			port_global = logPort;
 			i = i + 1;
 		
 		}
