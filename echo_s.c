@@ -64,6 +64,16 @@ void toLogServer (char* string, char* ipaddress, int logPort) { // creates a cli
    
 	sock= socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) error("socket");
+	
+	if(strcmp(ipaddress, "0") != 0)
+	{
+	//	printf("%s\n", "triggered");
+		server.sin_addr.s_addr = inet_addr(ipaddress);
+	}
+	if(logPort <= 0){//Third Deliverable pt2 defaults to port no 9999
+		logPort = 9999;
+	}
+
 
 	server.sin_family = AF_INET;
 	hp = gethostbyname(ipaddress); // This could have a problem, it assumes you are testing on one machine. If this causes an error, try cs1.utdallas.edu instead
@@ -71,14 +81,6 @@ void toLogServer (char* string, char* ipaddress, int logPort) { // creates a cli
 
 	bcopy((char *)hp->h_addr, (char *)&server.sin_addr, hp->h_length);
 	server.sin_port = htons(logPort);
-	if(strcmp(ipaddress, "0") != 0)
-	{
-		printf("%s\n", "triggered");
-		server.sin_addr.s_addr = inet_addr(ipaddress);
-	}
-	if(logPort <= 0){//Third Deliverable pt2 defaults to port no 9999
-		logPort = 9999;
-	}
 	
 	length=sizeof(struct sockaddr_in);
    
@@ -122,32 +124,36 @@ int main(int argc, char *argv[]) {
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int n = argc-1;
-	char* ipaddress = "0";//set for 0 in case no ip address is passed
+	char * ipaddress = "127.0.0.1"; //set for 127.0.0.1 in case no ip address is passed, changed from 0 in part 5
 		
 	// Calls if there is no argument for the port
 	// changed from argc > 4 -> argc > 6 during Third deliverable pt 2
-    if (argc < 2 || argc > 6) {
-        error("ERROR, no port passed as an argument, or too many ports\n");
+	// removed argc > 6 in part 5
+    if (argc < 2) {
+        error("ERROR, no port passed as an argument\n");
         exit(1);
     }
-	
+
+	int count = 0;
+	logPort = 0;
+
 	//Using socket( to establish the server via a port number, using a for loop for the number of port numbers
 	for (int i = 1; i < argc; i++) 
 	{
 		
-		//Third Deliverable Improvement by Michael Lewellen
+		//Third Deliverable Improvement by Michael Lewellen, bug fixed by Nicholas Strauss
 		if(strcmp(argv[i], "-logip") == 0)
 		{
 			ipaddress = argv[i+1];
-			break;
+			i = i + 1;
 		}
 		//Third Deliverable user2 task- Edward Shih
-		if(strcmp(argv[i], "-logport") == 0){
+		else if (strcmp(argv[i], "-logport") == 0){
 			logPort = atoi(argv[i+1]);	
-			break;
+			i = i + 1;
 		
 		}
-		
+		else {
 		sockT = socket(AF_INET, SOCK_STREAM, 0);
 		sockU = socket(AF_INET, SOCK_DGRAM, 0);
 		
@@ -157,8 +163,8 @@ int main(int argc, char *argv[]) {
 		if (sockU < 0) 
 			error("ERROR opening the socket UDP");
 		
-		sockTCP[i-1] = sockT;
-		sockUDP[i-1] = sockU;
+		sockTCP[count] = sockT;
+		sockUDP[count] = sockU;
 		
 		//remove '[' and ']' from every argument, due to requested format.
 		char * tempString = argv[i];
@@ -180,7 +186,11 @@ int main(int argc, char *argv[]) {
 			error("ERROR on binding");
 		if (bind(sockUDP[i-1], (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
 			error("ERROR on binding");
-	}
+		
+		count = count + 1;
+
+		}
+		}
 	//Handling zombie processes
 	if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) {
 		error("ERROR with zombie process handler");
