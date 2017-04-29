@@ -64,7 +64,7 @@ void toLogServer (char* string, char* ipaddress, int logPort) { // creates a cli
 	char* buffer;
   
 
-  printf("ToLogServer was called \n ");
+  
 
 
 	sock= socket(AF_INET, SOCK_DGRAM, 0);
@@ -130,8 +130,9 @@ void dostuff (int sock, char* ipaddress, int logPort) { //Method that is provide
 
 
 void SignalHandler (int Signal) {
-
-	printf("This is before the log server call \n");
+// This is the function that is called when SIGINT is recieved 
+//
+	
 	char end[20] = "echo_s is stopping";
 	toLogServer(end, "127.0.0.1", port_global); 
 	printf("echo_s is stopping \n");
@@ -141,7 +142,7 @@ void SignalHandler (int Signal) {
 
 int main(int argc, char *argv[]) {
 
-signal(SIGINT, SignalHandler);
+signal(SIGINT, SignalHandler); // This tells the server that if it gets a SIGINT, then it runs SignalHandler. 
 
 	// Initiate starting variables
     int sockT, sockU, portno, logPort, pidTCP, pidUDP, pidFirstSplit, pidSecondSplit, pidThirdSplit;
